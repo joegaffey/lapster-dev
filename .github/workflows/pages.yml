@@ -55,6 +55,7 @@ jobs:
         working-directory: src/web
         env:
           LAPSTER_BUILD_VERSION: dev-${{ steps.source.outputs.sha }}
+          LAPSTER_BUILD_CHANNEL: dev
         run: npm run build:viewer
       - name: Assemble Pages site
         working-directory: src

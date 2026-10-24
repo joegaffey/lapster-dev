@@ -17,3 +17,7 @@ gh workflow run pages.yml -R joegaffey/lapster-dev \
 ```
 
 The `ref` input accepts any branch or tag in `joegaffey/lapster`.
+
+The build sets `LAPSTER_BUILD_CHANNEL=dev`, which defaults the graphics settings to
+Baked environment shadows and Silhouette car shadows and isolates dev settings from the
+stable site.
