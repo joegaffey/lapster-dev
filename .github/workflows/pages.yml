@@ -1,0 +1,74 @@
+name: Deploy Lapster Dev Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Lapster branch or tag to build
+        required: true
+        default: feature/directional-shadows
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Lapster source
+        uses: actions/checkout@v4
+        with:
+          repository: joegaffey/lapster
+          ref: ${{ inputs.ref }}
+          path: src
+      - name: Read source revision
+        id: source
+        working-directory: src
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src -> target
+      - name: Install wasm-bindgen
+        run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - name: Install web dependencies
+        working-directory: src/web
+        run: npm ci
+      - name: Build viewer
+        working-directory: src/web
+        env:
+          LAPSTER_BUILD_VERSION: dev-${{ steps.source.outputs.sha }}
+        run: npm run build:viewer
+      - name: Assemble Pages site
+        working-directory: src
+        run: bash web/scripts/build-pages.sh
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: src/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
