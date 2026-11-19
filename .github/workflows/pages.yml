@@ -28,6 +28,7 @@ jobs:
           repository: joegaffey/lapster
           ref: ${{ inputs.ref }}
           path: src
+          submodules: recursive
       - name: Read source revision
         id: source
         working-directory: src
@@ -57,6 +58,19 @@ jobs:
           LAPSTER_BUILD_VERSION: dev-${{ steps.source.outputs.sha }}
           LAPSTER_BUILD_CHANNEL: dev
         run: npm run build:viewer
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/web/track-ed-src/package-lock.json
+      - name: Install track-ed dependencies
+        working-directory: src/web/track-ed-src
+        run: npm ci
+      - name: Build track-ed host
+        working-directory: src/web/track-ed-src
+        env:
+          VITE_LAPSTER_HOST: "1"
+        run: npm run build
       - name: Assemble Pages site
         working-directory: src
         run: bash web/scripts/build-pages.sh
